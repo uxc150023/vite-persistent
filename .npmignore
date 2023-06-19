@@ -1,0 +1,15 @@
+lib/
+node_modules/
+public/
+src/
+.gitignore
+index.html
+install-render.js
+install.js
+license.txt
+package-lock.json
+README.md
+stats.html
+vite-lib-render.config.js
+vite-lib.config.js
+vite.config.js
