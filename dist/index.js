@@ -1,6 +1,4 @@
-import path from 'path';
-import fs from 'fs';
-import crypto from 'crypto';
+'use strict';
 
 function _iterableToArrayLimit(arr, i) {
   var _i = null == arr ? null : "undefined" != typeof Symbol && arr[Symbol.iterator] || arr["@@iterator"];
@@ -434,14 +432,51 @@ function _createForOfIteratorHelper(o, allowArrayLike) {
   };
 }
 
-var persistentCachePlugin = function persistentCachePlugin() {
+var fs = require("fs");
+var crypto = require("crypto");
+var path = require("path");
+
+// import path from 'path';
+// import fs from 'fs';
+// import crypto from 'crypto';
+var projectRootDir = path.resolve(__dirname);
+function persistentCachePlugin() {
   var _server = null;
   var cache = {};
   var fileMd5Cache = {};
   var currentMd5 = {};
-  var cachePath = path.resolve('./', 'node_modules/.vite/cache/');
+  var cachePath = path.resolve("./", "node_modules/.vite/cache/");
+  var timer = null;
+  var writeCache = function writeCache() {
+    if (!fs.existsSync(cachePath)) {
+      fs.mkdirSync(cachePath);
+    }
+    // 缓存所有文件
+    var _iterator = _createForOfIteratorHelper(_server.moduleGraph.urlToModuleMap),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        if (value.transformResult && value.transformResult.etag) {
+          cache[key] = value.transformResult.etag;
+        }
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    fs.writeFileSync(cachePath + "/cache.json", JSON.stringify(cache), function (err) {
+      console.log(err);
+    });
+    fs.writeFileSync(cachePath + "/fileMd5Cache.json", JSON.stringify(currentMd5), function (err) {
+      console.log(err);
+    });
+  };
   return {
-    name: 'persistent-cache-plugin',
+    name: "persistent-cache-plugin",
     configureServer: function () {
       var _configureServer = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(server) {
         return _regeneratorRuntime().wrap(function _callee$(_context) {
@@ -450,7 +485,7 @@ var persistentCachePlugin = function persistentCachePlugin() {
               _server = server;
               server.middlewares.use(function (req, res, next) {
                 if (cache[req.url]) {
-                  var ifNoneMatch = req.headers['if-none-match'];
+                  var ifNoneMatch = req.headers["if-none-match"];
                   if (ifNoneMatch && cache[req.url] === ifNoneMatch) {
                     var moduleGraph = server.moduleGraph,
                       transformRequest = server.transformRequest;
@@ -462,7 +497,7 @@ var persistentCachePlugin = function persistentCachePlugin() {
                       setTimeout(function () {
                         var _req$headers$accept;
                         transformRequest(req.url, server, {
-                          html: (_req$headers$accept = req.headers.accept) === null || _req$headers$accept === void 0 ? void 0 : _req$headers$accept.includes('text/html')
+                          html: (_req$headers$accept = req.headers.accept) === null || _req$headers$accept === void 0 ? void 0 : _req$headers$accept.includes("text/html")
                         });
                       }, 3000);
                       return res.end();
@@ -488,24 +523,23 @@ var persistentCachePlugin = function persistentCachePlugin() {
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
-              console.log('buildStart--->');
-              if (fs.existsSync(cachePath + '/cache.json')) {
-                cache = require(cachePath + '/cache.json');
+              console.log("buildStart--->");
+              if (fs.existsSync(cachePath + "/cache.json")) {
+                cache = require(cachePath + "/cache.json");
               }
-              if (fs.existsSync(cachePath + '/fileMd5Cache.json')) {
-                fileMd5Cache = require(cachePath + '/fileMd5Cache.json');
+              if (fs.existsSync(cachePath + "/fileMd5Cache.json")) {
+                fileMd5Cache = require(cachePath + "/fileMd5Cache.json");
                 for (key in fileMd5Cache) {
-                  filePath = key.split('?')[0];
-                  packageJson = fs.readFileSync('.' + filePath);
-                  md5 = crypto.createHash('md5');
-                  currentMd5[key] = md5.update(packageJson).digest('base64');
+                  filePath = key.split("?")[0];
+                  packageJson = fs.readFileSync("." + filePath);
+                  md5 = crypto.createHash("md5");
+                  currentMd5[key] = md5.update(packageJson).digest("base64");
                   if (currentMd5[key] !== fileMd5Cache[key]) {
-                    console.log('改动--->', key);
                     cache[key] = null;
                   }
                 }
               }
-              process.once('SIGINT', /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+              process.once("SIGINT", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
                 return _regeneratorRuntime().wrap(function _callee2$(_context2) {
                   while (1) switch (_context2.prev = _context2.next) {
                     case 0:
@@ -533,71 +567,42 @@ var persistentCachePlugin = function persistentCachePlugin() {
       }
       return buildStart;
     }(),
-    buildEnd: function () {
-      var _buildEnd = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-        var _iterator, _step, _step$value, key, value;
+    transform: function () {
+      var _transform = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(code, map) {
+        var key, filePath, packageJson, md5;
         return _regeneratorRuntime().wrap(function _callee4$(_context4) {
           while (1) switch (_context4.prev = _context4.next) {
             case 0:
-              if (!fs.existsSync(cachePath)) {
-                fs.mkdirSync(cachePath);
-              }
-              // 缓存所有文件
-              _iterator = _createForOfIteratorHelper(_server.moduleGraph.urlToModuleMap);
-              try {
-                for (_iterator.s(); !(_step = _iterator.n()).done;) {
-                  _step$value = _slicedToArray(_step.value, 2), key = _step$value[0], value = _step$value[1];
-                  if (value.transformResult && value.transformResult.etag) {
-                    cache[key] = value.transformResult.etag;
-                  }
-                }
-              } catch (err) {
-                _iterator.e(err);
-              } finally {
-                _iterator.f();
-              }
-              fs.writeFileSync(cachePath + '/cache.json', JSON.stringify(cache), function (err) {
-                console.log(err);
-              });
-              fs.writeFileSync(cachePath + '/fileMd5Cache.json', JSON.stringify(currentMd5), function (err) {
-                console.log(err);
-              });
-              console.log('buildEnd--->');
-            case 6:
-            case "end":
-              return _context4.stop();
-          }
-        }, _callee4);
-      }));
-      function buildEnd() {
-        return _buildEnd.apply(this, arguments);
-      }
-      return buildEnd;
-    }(),
-    transform: function () {
-      var _transform = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(code, map) {
-        var key, filePath, packageJson, md5;
-        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-          while (1) switch (_context5.prev = _context5.next) {
-            case 0:
-              key = map.replace(projectRootDir, '');
-              if (!key.includes('export-helper')) {
+              key = map.replace(projectRootDir, "");
+              if (!key.includes("export-helper")) {
                 // 获取package.json文件内容，并生成md5,并存入 fileMd5Cache.json
-                filePath = key.split('?')[0];
-                console.log(filePath);
-                packageJson = fs.readFileSync('.' + filePath);
-                md5 = crypto.createHash('md5');
-                currentMd5[key] = md5.update(packageJson).digest('base64');
-                // 文件内容变化需删除缓存中对应的数据
-                if (fileMd5Cache[key] !== currentMd5[key]) {
-                  console.log('改动--->', key, fileMd5Cache[key], currentMd5[key]);
+                try {
+                  filePath = key.split("?")[0];
+                  if (!fs.existsSync(cachePath)) {
+                    fs.mkdirSync(cachePath);
+                  }
+                  packageJson = fs.readFileSync("." + filePath);
+                  md5 = crypto.createHash("md5");
+                  currentMd5[key] = md5.update(packageJson).digest("base64");
+                  // 文件内容变化需删除缓存中对应的数据
+                  if (!fileMd5Cache || !fileMd5Cache[key] || fileMd5Cache[key] !== currentMd5[key]) {
+                    console.log("改动--->", key, fileMd5Cache[key], currentMd5[key]);
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                      console.log("开始--->", new Date(), "本地缓存更新");
+                      writeCache();
+                      console.log("结束--->", new Date(), "本地缓存更新");
+                    }, 3000);
+                  }
+                } catch (error) {
+                  console.log("--->", error);
                 }
               }
             case 2:
             case "end":
-              return _context5.stop();
+              return _context4.stop();
           }
-        }, _callee5);
+        }, _callee4);
       }));
       function transform(_x2, _x3) {
         return _transform.apply(this, arguments);
@@ -605,49 +610,6 @@ var persistentCachePlugin = function persistentCachePlugin() {
       return transform;
     }()
   };
-};
+}
 
-export { persistentCachePlugin };
-rsistentCachePlugin = persistentCachePlugin;
- }));
-        function buildEnd() {
-          return _buildEnd.apply(this, arguments);
-        }
-        return buildEnd;
-      }(),
-      transform: function () {
-        var _transform = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(code, map) {
-          var key, filePath, packageJson, md5;
-          return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-            while (1) switch (_context5.prev = _context5.next) {
-              case 0:
-                key = map.replace(projectRootDir, '');
-                if (!key.includes('export-helper')) {
-                  // 获取package.json文件内容，并生成md5,并存入 fileMd5Cache.json
-                  filePath = key.split('?')[0];
-                  console.log(filePath);
-                  packageJson = fs.readFileSync('.' + filePath);
-                  md5 = crypto.createHash('md5');
-                  currentMd5[key] = md5.update(packageJson).digest('base64');
-                  // 文件内容变化需删除缓存中对应的数据
-                  if (fileMd5Cache[key] !== currentMd5[key]) {
-                    console.log('改动--->', key, fileMd5Cache[key], currentMd5[key]);
-                  }
-                }
-              case 2:
-              case "end":
-                return _context5.stop();
-            }
-          }, _callee5);
-        }));
-        function transform(_x2, _x3) {
-          return _transform.apply(this, arguments);
-        }
-        return transform;
-      }()
-    };
-  };
-
-  exports.persistentCachePlugin = persistentCachePlugin;
-
-}));
+module.exports = persistentCachePlugin;
